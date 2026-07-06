@@ -42,7 +42,7 @@ select.form-control{height:34px}
 .score-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:#ED1C24;cursor:pointer;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .score-slider::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#ED1C24;cursor:pointer;border:2px solid #fff}
 .score-display{min-width:52px;text-align:center;font-weight:700;font-size:15px;padding:3px 8px;border-radius:4px;color:#fff;background:#aaa}
-.score-na{background:#888}.score-bad{background:#e74c3c}.score-low{background:#f39c12}.score-mid{background:#27ae60}.score-best{background:#00c2de}
+.score-na{background:#888}.score-bad{background:#e74c3c}.score-low{background:#f1c40f}.score-mid{background:#27ae60}.score-high{background:#00c2de}.score-best{background:#8e44ad}
 .scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#999;width:220px;margin-top:2px;padding:0 2px}
 
 /* ── Live section average ── */
@@ -193,6 +193,11 @@ h5{font-size:16px;font-weight:700;margin-bottom:14px}
     <label class="control-label" for="q_title">Your Job Title <span class="text-danger">*</span></label>
     <input type="text" class="form-control" id="q_title" maxlength="255">
     <div class="alert alert-danger validation-message" id="err_title">Please enter your job title before continuing.</div>
+  </div>
+  <div class="form-group">
+    <label class="control-label" for="q_amd_contact" id="lbl_amd_contact">AMD Internal Contact <span class="text-danger">*</span></label>
+    <input type="email" class="form-control" id="q_amd_contact" maxlength="255" placeholder="name@amd.com">
+    <div class="alert alert-danger validation-message" id="err_amd_contact">Please enter a valid @amd.com email address before continuing.</div>
   </div>
   <div class="form-group">
     <label class="control-label" for="q_product">Product <span class="text-danger">*</span></label>
@@ -779,7 +784,8 @@ function rebuildSliders(lang) {
         var v = parseInt(slider.value);
         sliderValues[key] = v;
         disp.textContent = v === 0 ? 'N/A' : String(v);
-        disp.className = 'score-display ' + scoreClass(v);
+        disp.className = 'score-display';
+        disp.style.background = colorForVal(v);
         updateSliderTrack(slider);
         updateLiveAverages();
       });
@@ -816,24 +822,26 @@ const sliderValues = {};
 
 function scoreClass(v) {
   if (v === 0) return 'score-na';
-  if (v <= 3)  return 'score-bad';
-  if (v <= 6)  return 'score-low';
-  if (v <= 9)  return 'score-mid';
-  return 'score-best';
+  if (v <= 3)  return 'score-bad';   // red
+  if (v <= 5)  return 'score-low';   // yellow
+  if (v <= 7)  return 'score-mid';   // green
+  if (v <= 9)  return 'score-high';  // blue
+  return 'score-best';               // purple
 }
 function scoreLabel(v) { return v === 0 ? 'N/A' : String(v); }
 function colorForVal(v) {
-  if (v === null || v === 0) return '#aaa';
-  if (v <= 3) return '#e74c3c';
-  if (v <= 6) return '#f39c12';
-  if (v <= 9) return '#27ae60';
-  return '#00c2de';
+  if (!v || v === 0) return '#aaa';
+  if (v <= 3) return '#e74c3c';   // red — unacceptable
+  if (v <= 5) return '#f1c40f';   // yellow — below expectations
+  if (v <= 7) return '#27ae60';   // green — meets expectations
+  if (v <= 9) return '#00c2de';   // blue — above expectations
+  return '#8e44ad';               // purple — industry best
 }
 function updateSliderTrack(slider) {
-  const v = parseInt(slider.value);
+  var v = parseInt(slider.value);
   if (v === 0) { slider.style.background = '#ddd'; return; }
-  const pct = (v / 10) * 100, c = colorForVal(v);
-  slider.style.background = `linear-gradient(to right,${c} 0%,${c} ${pct}%,#ddd ${pct}%,#ddd 100%)`;
+  var pct = (v / 10) * 100, c = colorForVal(v);
+  slider.style.background = 'linear-gradient(to right,' + c + ' 0%,' + c + ' ' + pct + '%,#ddd ' + pct + '%,#ddd 100%)';
 }
 function calcSecAvg(sec) {
   const vals = sec.crits.map((_,i) => sliderValues[sec.id+'_'+i])
@@ -879,7 +887,7 @@ SECTIONS.forEach(sec => {
             <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
           </div>
         </div>
-        <div class="score-display score-na" id="disp_${key}">N/A</div>
+        <div class="score-display" id="disp_${key}" style="background:#888;">N/A</div>
       </div>`;
     container.appendChild(div);
     const slider = document.getElementById('sl_'+key);
@@ -889,7 +897,8 @@ SECTIONS.forEach(sec => {
       const v = parseInt(slider.value);
       sliderValues[key] = v;
       disp.textContent = scoreLabel(v);
-      disp.className = 'score-display ' + scoreClass(v);
+      disp.className = 'score-display';
+      disp.style.background = colorForVal(v);
       updateSliderTrack(slider);
       updateLiveAverages();
     });
@@ -915,6 +924,8 @@ function validate() {
   getTxt('q_name')    ? hide('err_name')    : fail('err_name');
   var em = getTxt('q_email');
   (em && isEmail(em)) ? hide('err_email') : fail('err_email');
+  var amdContact = getTxt('q_amd_contact');
+  (amdContact && isEmail(amdContact) && amdContact.toLowerCase().indexOf('@amd.com') !== -1) ? hide('err_amd_contact') : fail('err_amd_contact');
   getTxt('q_title')   ? hide('err_title')  : fail('err_title');
   getVal('q_product') ? hide('err_product'): fail('err_product');
   getVal('q_quarter') ? hide('err_quarter'): fail('err_quarter');
@@ -1040,7 +1051,7 @@ function renderResults() {
 
 function sendResultsEmail(name, company, quarter, year, product, avgs, total, ranking, xlsxFilename) {
   var submitterEmail = document.getElementById('q_email').value.trim();
-  var adminEmail     = 'brozhang@amd.com';
+  var adminEmail     = document.getElementById('q_amd_contact') ? document.getElementById('q_amd_contact').value.trim() : '';
 
   function scoreZone(v) {
     if (!v || v === 0) return 'N/A';
@@ -1051,39 +1062,54 @@ function sendResultsEmail(name, company, quarter, year, product, avgs, total, ra
     return v.toFixed(1) + ' — Industry Best';
   }
 
-  var lines = [
-    'AMD Quarterly Quality Review (QQR) — Survey Results', '='.repeat(52), '',
-    'Submitted by : ' + name,
-    'Company      : ' + company,
-    'Product      : ' + product,
-    'Period       : ' + quarter + ' ' + year,
-    'Supplier rank: ' + ranking,
-    '', '── SECTION SCORES ──────────────────────────────────'
-  ];
+  var amdContactEmail = document.getElementById('q_amd_contact') ? document.getElementById('q_amd_contact').value.trim() : '';
+
+  var tl2 = T[LANG];
+  var cs3 = (tl2 && tl2.comment_sections) ? tl2.comment_sections : {};
+
+  function scoreStr(v) { return (v === 0 || v === undefined) ? 'N/A' : String(v); }
+  function avgStr(avg) { return (avg === null || avg === undefined) ? 'N/A' : avg.toFixed(1); }
+  var D = ' | '; // pipe delimiter — survives email encoding
+
+  var lines = [];
+  lines.push('AMD Quarterly Quality Review (QQR) — Survey Results');
+  lines.push('');
+  lines.push('Submitted by         : ' + name);
+  lines.push('Company              : ' + company);
+  lines.push('AMD Internal Contact : ' + amdContactEmail);
+  lines.push('Product              : ' + product);
+  lines.push('Period               : ' + quarter + ' ' + year);
+  lines.push('Supplier Rank        : ' + ranking);
+  lines.push('');
+  lines.push('SECTION' + D + 'CRITERION' + D + 'SCORE' + D + 'COMMENTS');
+  lines.push('-'.repeat(120));
 
   avgs.forEach(function(sec) {
-    var tl2 = T[LANG];
-    var cs3 = (tl2 && tl2.comment_sections) ? tl2.comment_sections : {};
     var secLabel = cs3[sec.id] || sec.label;
-    lines.push(secLabel, '  Average: ' + scoreZone(sec.avg));
+    var cmt = (document.getElementById('q_comment_' + sec.id) || {value:''}).value.trim() || '';
+
+    // Section header on its own line (no delimiter columns)
+    lines.push(secLabel);
+
     sec.crits.forEach(function(crit, i) {
+      // Remove any newlines or paragraph breaks inside criterion text
+      var cleanCrit = crit.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
       var v = sliderValues[sec.id + '_' + i];
-      lines.push('  • ' + crit, '    Score: ' + (v === 0 ? 'N/A' : v));
+      lines.push('' + D + cleanCrit + D + scoreStr(v));
     });
-    var cmt = (document.getElementById('q_comment_' + sec.id) || {value:''}).value || '';
-    if (cmt.trim()) lines.push('  Comment: ' + cmt.trim());
-    lines.push('');
+
+    if (cmt) {
+      lines.push('' + D + 'Comment: ' + cmt);
+    }
+    lines.push('' + D + 'Section Average' + D + avgStr(sec.avg));
+    lines.push('-'.repeat(120));
   });
 
-  lines.push(
-    '── TOTAL AVERAGE SCORE ─────────────────────────────',
-    (total !== null && total !== undefined) ? scoreZone(total) : 'N/A — no scored responses',
-    '',
-    '📎 The Excel scorecard (' + xlsxFilename + ') was downloaded to your Downloads folder.',
-    'Please attach it to this email before sending.',
-    '',
-    '© ' + new Date().getFullYear() + ' Advanced Micro Devices, Inc.'
-  );
+  lines.push('' + D + 'TOTAL AVERAGE SCORE' + D + avgStr(total !== undefined ? total : null));
+  lines.push('='.repeat(120));
+  lines.push('');
+  lines.push('NOTE: The Excel scorecard (' + xlsxFilename + ') was downloaded to your Downloads folder. Please attach it to this email before sending.');
+  lines.push('(c) ' + new Date().getFullYear() + ' Advanced Micro Devices, Inc.');
 
   var subject = 'AMD QQR Survey Results — ' + company + ' — ' + quarter + ' ' + year;
   var body    = lines.join('\n');
@@ -1147,7 +1173,7 @@ function generateXlsxBytes(avgs, total, name, company, email, title, product, qu
 
   var rows=[];
   var ALL_COLS=['C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R'];
-  var XFS={HDR:2,NUM:11,SEC:5,AVG:6,TLB:7,TVL:8,PB:9,BLD:1};
+  var XFS={HDR:2,NUM:11,SEC:5,AVG:6,TLB:7,TVL:8,PB:9,BLD:1,RED:13,YEL:14,GRN:15,BLU:16,PRP:17,BC:18,PC:19};
 
   rows.push(buildRow(1,{Q:{v:'How would you rank AMD quality compared to similar suppliers?',s:XFS.PB},R:{v:'Rank',s:XFS.BLD}}));
   rows.push(buildRow(2,{R:{v:ranking,s:XFS.PB}}));
@@ -1181,7 +1207,8 @@ function generateXlsxBytes(avgs, total, name, company, email, title, product, qu
       if(i===0) rc['C']={v:info.label,s:XFS.SEC};
       rc['D']={v:crit,s:XFS.PB};
       rc[col]={v:'x',s:XFS.BLD};
-      rc['R']={v:String(val),t:'n',s:XFS.PB};
+      var scoreSt=(val===10)?XFS.PRP:(val>=8)?XFS.BLU:(val>=6)?XFS.GRN:(val>=4)?XFS.YEL:(val>=1)?XFS.RED:XFS.PC;
+      rc['R']={v:String(val),t:'n',s:scoreSt};
       if(i===0&&cmt.trim()) rc['Q']={v:cmt.trim(),s:XFS.PB};
       rows.push(buildRow(rn,rc));
     });
@@ -1189,22 +1216,24 @@ function generateXlsxBytes(avgs, total, name, company, email, title, product, qu
     var fr=SCORE_ROWS[sec.id+'_0'];
     var lr=SCORE_ROWS[sec.id+'_'+(sec.crits.length-1)];
     var ac={};ALL_COLS.forEach(function(c){ac[c]={v:'',s:XFS.PB};});
-    ac['Q']={v:'Section Average',s:XFS.AVG};
     var freshSecAvg=calcSecAvg(sec);
     var secAvgVal=(freshSecAvg!==null&&freshSecAvg!==undefined)?parseFloat(freshSecAvg.toFixed(1)):'';
-    ac['R']={v:secAvgVal===''?'':String(secAvgVal),t:secAvgVal===''?'s':'n',s:XFS.AVG};
+    var secAvgSt=(secAvgVal==='')?XFS.AVG:(secAvgVal===10)?XFS.PRP:(secAvgVal>=8)?XFS.BLU:(secAvgVal>=6)?XFS.GRN:(secAvgVal>=4)?XFS.YEL:XFS.RED;
+    ac['Q']={v:'Section Average',s:XFS.BC};
+    ac['R']={v:secAvgVal===''?'':String(secAvgVal),t:secAvgVal===''?'s':'n',s:secAvgSt};
     rows.push(buildRow(avgRow,ac));
   });
 
   var r29={};ALL_COLS.forEach(function(c){r29[c]={v:'',s:XFS.PB};});
-  r29['Q']={v:'Total Score',s:XFS.TLB};
   var gbTots=SECTIONS.map(function(s){return calcSecAvg(s);}).filter(function(v){return v!==null&&v!==undefined;});
   var gbTotal=gbTots.length?gbTots.reduce(function(a,b){return a+b;},0)/gbTots.length:null;
   var gbTotalVal=(gbTotal!==null&&gbTotal!==undefined)?parseFloat(gbTotal.toFixed(1)):'';
-  r29['R']={v:gbTotalVal===''?'':String(gbTotalVal),t:gbTotalVal===''?'s':'n',s:XFS.TVL};
+  var gbTotSt=(gbTotalVal==='')?XFS.TVL:(gbTotalVal===10)?XFS.PRP:(gbTotalVal>=8)?XFS.BLU:(gbTotalVal>=6)?XFS.GRN:(gbTotalVal>=4)?XFS.YEL:XFS.RED;
+  r29['Q']={v:'Total Score',s:XFS.BC};
+  r29['R']={v:gbTotalVal===''?'':String(gbTotalVal),t:gbTotalVal===''?'s':'n',s:gbTotSt};
   rows.push(buildRow(29,r29));
 
-  var rowHeights={2:28.8,8:28.8};for(var rh=9;rh<=27;rh++)rowHeights[rh]=28.8;
+  var rowHeights={2:28.8,8:40.0};for(var rh=9;rh<=27;rh++)rowHeights[rh]=28.8;
   var rowsH=rows.map(function(rx){
     var m=rx.match(/^<row r="(\d+)"/);if(!m)return rx;
     var rn=parseInt(m[1]);var ht=rowHeights[rn];
@@ -1221,7 +1250,11 @@ function generateXlsxBytes(avgs, total, name, company, email, title, product, qu
     +'<col min="18" max="18" width="9.22" customWidth="1"/>'
     +'</cols>';
 
-  var mergeCells2='<mergeCells count="4">'
+  var mergeCells2='<mergeCells count="9">'
+    +'<mergeCell ref="E8:G8"/>'
+    +'<mergeCell ref="H8:I8"/>'
+    +'<mergeCell ref="J8:K8"/>'
+    +'<mergeCell ref="L8:M8"/>'
     +'<mergeCell ref="Q10:Q13"/>'
     +'<mergeCell ref="Q15:Q17"/>'
     +'<mergeCell ref="Q19:Q23"/>'
@@ -1285,6 +1318,14 @@ var XF = {
   PLAIN_BORDER:9,  // plain with border
   INSTR:      10,  // italic, yellow text (instruction row)
   NUMBER_HDR: 11,  // centered, border, light gray bg
+  TOP_BORDER:  12, // top border only
+  X_RED:       13, // x cell — unacceptable (1-3)
+  X_YELLOW:    14, // x cell — below expectations (4-5)
+  X_GREEN:     15, // x cell — meets expectations (6-7)
+  X_BLUE:      16, // x cell — above expectations (8-9)
+  X_PURPLE:    17, // x cell — industry best (10)
+  BOLD_CENTER:  18, // bold + centered, no fill, border
+  PLAIN_CENTER: 19, // plain + centered, no fill, border (for score=0)
 };
 
 function buildStyles() {
@@ -1299,8 +1340,9 @@ function buildStyles() {
   +   '<font><sz val="10"/><b/><color rgb="FF1F3864"/><name val="Calibri"/></font>'
   + '</fonts>'
 
-  // Fills: 0=none, 1=gray125 (required), 2=yellow, 3=blue-gray, 4=green, 5=gold, 6=light-blue, 7=light-gray
-  + '<fills count="8">'
+  // Fills: 0=none, 1=gray125, 2=yellow, 3=blue-gray, 4=green, 5=gold, 6=light-blue, 7=light-gray
+  //        8=red(unacceptable), 9=yellow(below), 10=green(meets), 11=blue(above), 12=purple(best)
+  + '<fills count="13">'
   +   '<fill><patternFill patternType="none"/></fill>'
   +   '<fill><patternFill patternType="gray125"/></fill>'
   +   '<fill><patternFill patternType="solid"><fgColor rgb="FFFFFF00"/></patternFill></fill>'
@@ -1309,10 +1351,15 @@ function buildStyles() {
   +   '<fill><patternFill patternType="solid"><fgColor rgb="FFFFC000"/></patternFill></fill>'
   +   '<fill><patternFill patternType="solid"><fgColor rgb="FFDCE6F1"/></patternFill></fill>'
   +   '<fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/></patternFill></fill>'
+  +   '<fill><patternFill patternType="solid"><fgColor rgb="FFE74C3C"/></patternFill></fill>'
+  +   '<fill><patternFill patternType="solid"><fgColor rgb="FFF1C40F"/></patternFill></fill>'
+  +   '<fill><patternFill patternType="solid"><fgColor rgb="FF27AE60"/></patternFill></fill>'
+  +   '<fill><patternFill patternType="solid"><fgColor rgb="FF00C2DE"/></patternFill></fill>'
+  +   '<fill><patternFill patternType="solid"><fgColor rgb="FF8E44AD"/></patternFill></fill>'
   + '</fills>'
 
-  // Borders: 0=none, 1=thin all around
-  + '<borders count="2">'
+  // Borders: 0=none, 1=thin all around, 2=top only
+  + '<borders count="3">'
   +   '<border><left/><right/><top/><bottom/><diagonal/></border>'
   +   '<border>'
   +     '<left style="thin"><color rgb="FF000000"/></left>'
@@ -1320,6 +1367,11 @@ function buildStyles() {
   +     '<top style="thin"><color rgb="FF000000"/></top>'
   +     '<bottom style="thin"><color rgb="FF000000"/></bottom>'
   +     '<diagonal/>'
+  +   '</border>'
+  +   '<border>'
+  +     '<left/><right/>'
+  +     '<top style="thin"><color rgb="FF000000"/></top>'
+  +     '<bottom/><diagonal/>'
   +   '</border>'
   + '</borders>'
 
@@ -1338,7 +1390,7 @@ function buildStyles() {
   // 9  PLAIN_BORDER font0 fill0 border1
   // 10 INSTR        font0 fill2 border0  (yellow bg instruction)
   // 11 NUMBER_HDR   font0 fill7 border1  (light gray, centered)
-  + '<cellXfs count="12">'
+  + '<cellXfs count="20">'
   +   '<xf xfId="0" numFmtId="0" fontId="0" fillId="0" borderId="0"/>'                                                    // 0 DEFAULT
   +   '<xf xfId="0" numFmtId="0" fontId="1" fillId="0" borderId="0"><alignment wrapText="1"/></xf>'                       // 1 BOLD
   +   '<xf xfId="0" numFmtId="0" fontId="2" fillId="3" borderId="1"><alignment horizontal="center" wrapText="1"/></xf>'   // 2 HEADER_DARK
@@ -1351,6 +1403,14 @@ function buildStyles() {
   +   '<xf xfId="0" numFmtId="0" fontId="0" fillId="0" borderId="1"><alignment wrapText="1"/></xf>'                       // 9 PLAIN_BORDER
   +   '<xf xfId="0" numFmtId="0" fontId="0" fillId="2" borderId="0"><alignment wrapText="1" shrinkToFit="1"/></xf>'       // 10 INSTR
   +   '<xf xfId="0" numFmtId="0" fontId="0" fillId="7" borderId="1"><alignment horizontal="center"/></xf>'                // 11 NUMBER_HDR
+  +   '<xf xfId="0" numFmtId="0" fontId="0" fillId="0" borderId="2"/>'                                                    // 12 TOP_BORDER
+  +   '<xf xfId="0" numFmtId="0" fontId="1" fillId="8"  borderId="1"><alignment horizontal="center"/></xf>'               // 13 X_RED
+  +   '<xf xfId="0" numFmtId="0" fontId="1" fillId="9"  borderId="1"><alignment horizontal="center"/></xf>'               // 14 X_YELLOW
+  +   '<xf xfId="0" numFmtId="0" fontId="1" fillId="10" borderId="1"><alignment horizontal="center"/></xf>'               // 15 X_GREEN
+  +   '<xf xfId="0" numFmtId="0" fontId="1" fillId="11" borderId="1"><alignment horizontal="center"/></xf>'               // 16 X_BLUE
+  +   '<xf xfId="0" numFmtId="0" fontId="2" fillId="12" borderId="1"><alignment horizontal="center"/></xf>'               // 17 X_PURPLE
+  +   '<xf xfId="0" numFmtId="0" fontId="1" fillId="0"  borderId="1"><alignment horizontal="center"/></xf>'               // 18 BOLD_CENTER
+  +   '<xf xfId="0" numFmtId="0" fontId="0" fillId="0"  borderId="1"><alignment horizontal="center"/></xf>'               // 19 PLAIN_CENTER
   + '</cellXfs>'
   + '</styleSheet>';
 }
@@ -1491,11 +1551,17 @@ function exportCSV() {
       }
       rowCells['D'] = {v: crit, s:XF.PLAIN_BORDER};
 
-      // "x" marker in chosen score column (bold)
-      rowCells[col] = {v: 'x', s:XF.BOLD};
+      // "x" marker — plain, no color
+      rowCells[col] = {v: 'x', s: XF.BOLD};
 
-      // Score value directly from slider (no formula); 0 for N/A
-      rowCells['R'] = {v: String(val), t: 'n', s:XF.PLAIN_BORDER};
+      // Score column — color coded by zone
+      var scoreStyle = (val === 10) ? XF.X_PURPLE
+                     : (val >= 8)  ? XF.X_BLUE
+                     : (val >= 6)  ? XF.X_GREEN
+                     : (val >= 4)  ? XF.X_YELLOW
+                     : (val >= 1)  ? XF.X_RED
+                     : XF.PLAIN_CENTER;
+      rowCells['R'] = {v: String(val), t: 'n', s: scoreStyle};
 
       // Comment on first row of section
       if (i === 0 && cmt.trim()) rowCells['Q'] = {v: cmt.trim(), s:XF.PLAIN_BORDER};
@@ -1503,27 +1569,39 @@ function exportCSV() {
       rows.push(buildRow(rn, rowCells));
     });
 
-    // Section average row — full border across all cols
+// Section average row — full border across all cols
     var avgRow = AVG_ROWS[sec.id];
     var firstScoreRow = SCORE_ROWS[sec.id + '_0'];
     var lastScoreRow  = SCORE_ROWS[sec.id + '_' + (sec.crits.length - 1)];
     var avgCells = {};
     ALL_COLS.forEach(function(c) { avgCells[c] = {v:'', s:XF.PLAIN_BORDER}; });
-    avgCells['Q'] = {v:'Section Average', s:XF.AVG_CELL};
+    avgCells['Q'] = {v:'Section Average', s:XF.BOLD_CENTER};
     var freshAvg = calcSecAvg(sec);
     var avgVal = (freshAvg !== null && freshAvg !== undefined) ? parseFloat(freshAvg.toFixed(1)) : '';
-    avgCells['R'] = {v: avgVal === '' ? '' : String(avgVal), t: avgVal === '' ? 's' : 'n', s:XF.AVG_CELL};
+    var avgScoreStyle = (avgVal === '') ? XF.PLAIN_BORDER
+                      : (avgVal === 10) ? XF.X_PURPLE
+                      : (avgVal >= 8)  ? XF.X_BLUE
+                      : (avgVal >= 6)  ? XF.X_GREEN
+                      : (avgVal >= 4)  ? XF.X_YELLOW
+                      : XF.X_RED;
+    avgCells['R'] = {v: avgVal === '' ? '' : String(avgVal), t: avgVal === '' ? 's' : 'n', s: avgScoreStyle};
     rows.push(buildRow(avgRow, avgCells));
   });
 
   // Row 29: Total Score (gold — full border across all cols)
   var row29 = {};
   ['C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R'].forEach(function(c){ row29[c]={v:'',s:XF.PLAIN_BORDER}; });
-  row29['Q'] = {v:'Total Score', s:XF.TOTAL_LABEL};
+  row29['Q'] = {v:'Total Score', s:XF.BOLD_CENTER};
   var freshTots = SECTIONS.map(function(s){ return calcSecAvg(s); }).filter(function(v){ return v !== null && v !== undefined; });
   var freshTotal = freshTots.length ? freshTots.reduce(function(a,b){return a+b;},0)/freshTots.length : null;
   var totalVal = (freshTotal !== null && freshTotal !== undefined) ? parseFloat(freshTotal.toFixed(1)) : '';
-  row29['R'] = {v: totalVal === '' ? '' : String(totalVal), t: totalVal === '' ? 's' : 'n', s:XF.TOTAL_VAL};
+  var totalScoreStyle = (totalVal === '') ? XF.TOTAL_VAL
+                       : (totalVal === 10) ? XF.X_PURPLE
+                       : (totalVal >= 8)  ? XF.X_BLUE
+                       : (totalVal >= 6)  ? XF.X_GREEN
+                       : (totalVal >= 4)  ? XF.X_YELLOW
+                       : XF.X_RED;
+  row29['R'] = {v: totalVal === '' ? '' : String(totalVal), t: totalVal === '' ? 's' : 'n', s: totalScoreStyle};
   rows.push(buildRow(29, row29));
 
   // ── Column widths (matching template exactly) ─────────────────
@@ -1541,7 +1619,7 @@ function exportCSV() {
 
   // ── Row heights (matching template) ──────────────────────────
   // Row 2: 28.8, Row 8: 28.8, Rows 9-27: 26.1
-  var rowHeights = {2:28.8, 8:28.8};
+  var rowHeights = {2:28.8, 8:40.0};
   for (var rh = 10; rh <= 27; rh++) rowHeights[rh] = 28.8;
 
   // Inject row heights into row XML
@@ -1557,7 +1635,11 @@ function exportCSV() {
   });
 
   // ── Assemble SpreadsheetML ────────────────────────────────────
-  var mergeCells = '<mergeCells count="4">'
+  var mergeCells = '<mergeCells count="9">'
+    + '<mergeCell ref="E8:G8"/>'
+    + '<mergeCell ref="H8:I8"/>'
+    + '<mergeCell ref="J8:K8"/>'
+    + '<mergeCell ref="L8:M8"/>'
     + '<mergeCell ref="Q10:Q13"/>'
     + '<mergeCell ref="Q15:Q17"/>'
     + '<mergeCell ref="Q19:Q23"/>'
